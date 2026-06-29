@@ -1,0 +1,13 @@
+langgraph
+langchain
+langchain-community
+langchain-openai
+liteparse
+faiss-cpu
+pypdf
+pdfplumber
+pdf2image
+pytesseract
+pillow
+requests
+beautifulsoup4
