@@ -1,12 +1,24 @@
 import os
 import hashlib
 import math
-from getpass import getpass
 from langchain_core.embeddings import Embeddings
 from langchain_openai import ChatOpenAI
-from dotenv import load_dotenv
+from dotenv import dotenv_values, find_dotenv, load_dotenv
 
-load_dotenv()
+DOTENV_PATH = find_dotenv(usecwd=True)
+
+def load_project_env() -> None:
+    if not DOTENV_PATH:
+        return
+    load_dotenv(DOTENV_PATH, encoding="utf-8-sig")
+    for key, value in dotenv_values(DOTENV_PATH, encoding="utf-8-sig").items():
+        normalized_key = (key or "").lstrip("\ufeff").strip()
+        if normalized_key and value and not os.environ.get(normalized_key):
+            os.environ[normalized_key] = value
+    if not os.environ.get("GROQ_API_KEY") and os.environ.get("GROK_API_KEY"):
+        os.environ["GROQ_API_KEY"] = os.environ["GROK_API_KEY"]
+
+load_project_env()
 
 class LocalHashEmbeddings(Embeddings):
     """Small local embedding fallback that does not require an API key."""
@@ -32,17 +44,22 @@ class LocalHashEmbeddings(Embeddings):
     def embed_query(self, text: str) -> list[float]:
         return self._embed(text)
 
-def require_env(name: str) -> str:
+def require_env(name: str, required: bool = False) -> str | None:
     value = os.getenv(name)
-    if not value:
-        value = getpass(f"Enter {name}: ").strip()
-    if not value:
-        raise RuntimeError(f"{name} is required. Add it to .env or enter it when prompted.")
+    if required and not value:
+        raise RuntimeError(f"{name} is required. Add {name}=your_key to .env.")
     return value
 
-llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    api_key=require_env("OPENAI_API_KEY")
-)
+GROQ_API_KEY = require_env("GROQ_API_KEY") or require_env("GROK_API_KEY")
+
+if GROQ_API_KEY:
+    llm = ChatOpenAI(
+        model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"),
+        api_key=GROQ_API_KEY,
+        base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
+        temperature=0.2,
+    )
+else:
+    llm = None
 
 embeddings = LocalHashEmbeddings()

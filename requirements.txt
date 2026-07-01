@@ -2,6 +2,7 @@ langgraph
 langchain
 langchain-community
 langchain-openai
+streamlit
 liteparse
 faiss-cpu
 pypdf
@@ -11,3 +12,4 @@ pytesseract
 pillow
 requests
 beautifulsoup4
+markdown
